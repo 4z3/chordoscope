@@ -51,12 +51,14 @@ function draw_packet(context, x, y, packet, radius) {
   context.lineTo(x2, y2);
   context.closePath();
 
+  var c = Math.min(1, packet.n / 32);
+
   context.strokeStyle = '#ffffff';
   var gradient = context.createLinearGradient(x1, y1, x2, y2);
-  gradient.addColorStop(1, 'rgba(255,255,255,1)');
+  gradient.addColorStop(1, 'rgba(255,255,255,'+c+')');
   gradient.addColorStop((new Date() - packet.date) / 1000, 'rgba(255,255,255,0)');
   context.strokeStyle = gradient;
-  context.lineWidth = 1;
+  context.lineWidth = Math.min(packet.n, 1);
   context.stroke();
 };
 
@@ -138,7 +140,8 @@ var render = function () {
 
 var packets = {};
 function add_packet(src, dst) {
-  packets[src+dst] = {date: new Date(), src: src, dst: dst};
+  var n = src+dst in packets ? packets[src+dst].n + 1 : 1;
+  packets[src+dst] = {date: new Date(), src: src, dst: dst, n: n};
 };
 
 
