@@ -75,6 +75,8 @@ function draw_host(context, x, y, host, radius, size, lo, hi) {
 };
 
 var render = function () {
+  var date = new Date();
+
   // TODO only redraw when visible world has changed...
   context.fillStyle = '#000044';
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -95,7 +97,6 @@ var render = function () {
   context.stroke();
 
   var hosts = {};
-  var date = new Date();
 
   Object.keys(packets).forEach(function (key) {
     var packet = packets[key];
@@ -143,14 +144,13 @@ var render = function () {
   context.stroke();
 
   var hosts = {};
-  var date = new Date();
 
   var gw = '10.42.0.1';
   var lo = ipv4_to_int('10.42.0.0');
   var hi = ipv4_to_int('10.42.4.255');
 
   Object.keys(packets).forEach(function (key) {
-    var packet = packets[key];
+    var packet = clone(packets[key]);
     if (date - packet.date < 1000) {
       var src = ipv4_to_int(packet.src);
       var dst = ipv4_to_int(packet.dst);
@@ -160,7 +160,6 @@ var render = function () {
       draw_packet(context, x, y, packet, r, lo, hi, date);
       hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
       hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
-      new_packets[key] = packet;
     };
   });
 
@@ -182,7 +181,6 @@ var render = function () {
   context.fillStyle = '#ff0000';
   draw_host(context, x, y, '10.42.3.242', r, 5, lo, hi);
 
-
   packets = new_packets;
 };
 
@@ -192,16 +190,6 @@ function add_packet(src, dst) {
   packets[src+dst] = {date: new Date(), src: src, dst: dst, n: n};
 };
 
-
-if (false)
-(function rec () {
-  var src = int_to_ipv4(Math.random()*Math.pow(2,32));
-  var dst = int_to_ipv4(Math.random()*Math.pow(2,32));
-  add_packet(src, '42.0.0.1');
-  add_packet(src, dst);
-  setTimeout(rec, Math.random() * 1000);
-})();
-
 
 var socket = new io.Socket();
 socket.connect();
@@ -219,3 +207,8 @@ function inside (x, lo, hi) {
   return lo <= x && x <= hi;
 };
 
+function clone (that) {
+  function F() {}
+  F.prototype = that;
+  return new F();
+};
