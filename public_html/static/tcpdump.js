@@ -154,10 +154,6 @@ var render = function () {
   var lo = ipv4_to_int('10.42.0.0');
   var hi = ipv4_to_int('10.42.4.255');
 
-  function inside (x, lo, hi) {
-    return lo <= x && x <= hi;
-  };
-
   Object.keys(packets).forEach(function (key) {
     var packet = packets[key];
     if (date - packet.date < 1000) {
@@ -221,4 +217,11 @@ socket.on('message', function (message) {
   message = JSON.parse(message);
   add_packet(message[0], message[1]);
 });
+
+
+//// lib
+
+function inside (x, lo, hi) {
+  return lo <= x && x <= hi;
+};
 
