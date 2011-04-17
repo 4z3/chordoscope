@@ -16,11 +16,11 @@ server.listen(8001);
 
 var io = require('socket.io');
 var socket = io.listen(server);
-var client_send = function () {};
-socket.on('connection', function (client) {
+var clients = {};
+var broadcast = (function () {
   var last = new Date();
   var buf = {};
-  client_send = function (x) {
+  return function (x) {
     var key = JSON.stringify(x);
     if (key in buf) {
       buf[key]++;
@@ -31,12 +31,24 @@ socket.on('connection', function (client) {
     if ((now - last) > 1000/30) {
       Object.keys(buf).forEach(function (key) {
         var m = key.replace(']', ',' + buf[key] + ']');
-        client.send(m);
+        Object.keys(clients).forEach(function (key) {
+          var client = clients[key];
+          client.send(m);
+        });
       });
       buf = {};
       last = now;
     };
   };
+})();
+
+socket.on('connection', function (client) {
+  var key = (client.request.socket.remoteAddress
+    + ':' + client.request.socket.remotePort);
+  clients[key] = client;
+  client.on('disconnect', function () {
+    delete clients[key];
+  });
 });
 
 tcpdump = spawn('sudo', [ 'tcpdump-as-nobody' ]);
@@ -45,7 +57,7 @@ tcpdump.stdout.on('data', function (data) {
   data.toString().split(/\n/g).forEach(function (line) {
     var info = /^IP ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+) > ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+).*/.exec(line);
     if (info) {
-      client_send([info[1],info[3]]);
+      broadcast([info[1],info[3]]);
     };
   });
 });
