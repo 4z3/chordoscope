@@ -74,9 +74,9 @@ function draw_packet(context, x, y, packet, radius, lo, hi, gw, date, rot) {
   context.lineTo(x2, y2);
   context.closePath();
 
-  var c = host_fillStyle[packet.src] || '#ffffff';
+  var c = host_fillStyle[packet.dst] || '#ffffff';
 
-  var a = Math.min(1, packet.n / 16);
+  var a = Math.min(1, packet.n / 4);
 
   var gradient = context.createLinearGradient(x1, y1, x2, y2);
   gradient.addColorStop(1, hex2rgb(c, a));
@@ -141,7 +141,7 @@ var render = function () {
   );
 
   render_net(context,
-      8 + n + 8 * 1,
+      8 + n + 8 * 0,
       8,
       n / 2,
       date, weights, packets,
@@ -165,8 +165,8 @@ function packets_to_host_weights (x) {
   var y = {};
   Object.keys(x).forEach(function (key) {
     var packet = x[key];
-    y[packet.src] = packet.src in y ? y[packet.src] + 1 : 3;
-    y[packet.dst] = packet.dst in y ? y[packet.dst] : 3;
+    y[packet.src] = packet.src in y ? y[packet.src] + 1 : 1;
+    y[packet.dst] = packet.dst in y ? y[packet.dst] : 1;
   });
   Object.keys(x).forEach(function (key) {
     var packet = x[key];
@@ -177,7 +177,7 @@ function packets_to_host_weights (x) {
 };
 
 function normalize_weight(x) {
-  return Math.min(Math.max(x, 3), 128);
+  return Math.min(Math.max(x, 3), 512);
 };
 
 function render_net (context, x, y, r, date, weights, packets, lo, hi, gw, rot) {
@@ -185,20 +185,20 @@ function render_net (context, x, y, r, date, weights, packets, lo, hi, gw, rot) 
   // context#arc(x, y, radius, startAngle, endAngle [, anticlockwise])
   context.arc(x + r, y + r, r, 0, Math.PI * 2, true);
   context.closePath();
-  context.strokeStyle = '#ffffff';
+  context.strokeStyle = '#aaaaaa';
   context.lineWidth = 1;
   context.stroke();
 
   if (lo) lo = ipv4_to_int(lo);
   if (hi) hi = ipv4_to_int(hi);
 
-  Object.keys(packets).forEach(function (key) {
-    draw_packet(context, x, y, packets[key], r, lo, hi, gw, date, rot);
-  });
-
   // TODO sort by size
   Object.keys(weights).forEach(function (host) {
     draw_host(context, x, y, host, r, weights[host], lo, hi, gw, rot);
+  });
+
+  Object.keys(packets).forEach(function (key) {
+    draw_packet(context, x, y, packets[key], r, lo, hi, gw, date, rot);
   });
 };
 
