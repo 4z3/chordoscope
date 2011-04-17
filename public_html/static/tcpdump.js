@@ -9,7 +9,6 @@ var load = function () {
     if (context) {
       init();
       resize();
-      //setInterval(step, 1000/30);
       setInterval(function () { step(); render() }, 1000/30);
     };
   };
@@ -78,7 +77,7 @@ function draw_host(context, x, y, host, radius, size, lo, hi) {
 var render = function () {
   // TODO only redraw when visible world has changed...
   context.fillStyle = '#000044';
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  //context.fillRect(0, 0, canvas.width, canvas.height);
 
   var new_packets = {};
 
@@ -102,10 +101,6 @@ var render = function () {
     var packet = packets[key];
     if (date - packet.date < 1000) {
       draw_packet(context, x, y, packet, r);
-      //if (packet.src in senders) senders[packet.src]++;
-      //else senders[packet.src] = 1;
-      //if (packet.dst in recvers) recvers[packet.dst]++;
-      //else recvers[packet.dst] = 1;
       hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
       hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
       new_packets[key] = packet;
@@ -159,14 +154,13 @@ var render = function () {
     if (date - packet.date < 1000) {
       var src = ipv4_to_int(packet.src);
       var dst = ipv4_to_int(packet.dst);
-      //if (!inside(src, lo, hi)) return;
-      //if (!inside(dst, lo, hi)) return;
-      packet.src = lo <= src && src <= hi ? packet.src : gw;
-      packet.dst = lo <= dst && dst <= hi ? packet.dst : gw;
+      packet.src = inside(src, lo, hi) ? packet.src : gw;
+      packet.dst = inside(dst, lo, hi) ? packet.dst : gw;
 
       draw_packet(context, x, y, packet, r, lo, hi);
       hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
       hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
+      new_packets[key] = packet;
     };
   });
 
