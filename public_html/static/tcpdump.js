@@ -1,4 +1,19 @@
 
+host_fillStyle = {};
+host_fillStyle['10.42.2.248'] = '#ff00ff';
+host_fillStyle['10.42.2.232'] = '#aa00ff';
+host_fillStyle['10.42.3.242'] = '#ff0000';
+host_fillStyle['10.42.0.1'] = '#00ff00';
+
+// deepmix
+host_fillStyle['89.179.179.5'  ] = '#00aeef';
+host_fillStyle['69.163.134.109'] = '#00aeef';
+host_fillStyle['194.183.224.59'] = '#00aeef';
+host_fillStyle['91.121.10.128' ] = '#00aeef';
+host_fillStyle['178.32.93.168' ] = '#00aeef';
+host_fillStyle['83.169.42.180' ] = '#00aeef';
+
+
 var load = function () {
   canvas = document.createElement('canvas');
   world  = document.createElement('div');
@@ -36,9 +51,18 @@ var step = function () {
 };
 
 
-function draw_packet(context, x, y, packet, radius, lo, hi, date) {
-  src = ipv4_to_coords(packet.src, radius, radius, radius, lo, hi);
-  dst = ipv4_to_coords(packet.dst, radius, radius, radius, lo, hi);
+function draw_packet(context, x, y, packet, radius, lo, hi, date, gw) {
+
+  var src = packet.src;
+  var dst = packet.dst;
+
+  if (gw) {
+    if (!inside(ipv4_to_int(src), lo, hi)) src = gw;
+    if (!inside(ipv4_to_int(dst), lo, hi)) dst = gw;
+  };
+
+  src = ipv4_to_coords(src, radius, radius, radius, lo, hi);
+  dst = ipv4_to_coords(dst, radius, radius, radius, lo, hi);
 
   var x1 = x + src[0];
   var y1 = y + src[1];
@@ -61,7 +85,14 @@ function draw_packet(context, x, y, packet, radius, lo, hi, date) {
   context.stroke();
 };
 
-function draw_host(context, x, y, host, radius, size, lo, hi) {
+function draw_host(context, x, y, host, radius, size, lo, hi, gw) {
+
+  context.fillStyle = host_fillStyle[host] || '#ffffff';
+
+  if (gw) {
+    if (!inside(ipv4_to_int(host), lo, hi)) host = gw;
+  };
+
   host = ipv4_to_coords(host, radius, radius, radius, lo, hi);
 
   x = x + host[0];
@@ -73,6 +104,7 @@ function draw_host(context, x, y, host, radius, size, lo, hi) {
   context.stroke();
   context.fill();
 };
+
 
 var render = function () {
   var date = new Date();
@@ -109,24 +141,8 @@ var render = function () {
   });
 
   // TODO sort by size
-  context.fillStyle = '#ffffff';
   Object.keys(hosts).forEach(function (host) {
     draw_host(context, x, y, host, r, Math.min(Math.max(hosts[host], 3), 12));
-  });
-
-  // external IP
-  context.fillStyle = '#00ff00';
-  draw_host(context, x, y, '10.42.0.1', r, 5, lo, hi);
-
-  // deepmix
-  context.fillStyle = '#00aeef';
-  [ '89.179.179.5',
-  '69.163.134.109',
-  '194.183.224.59',
-  '91.121.10.128',
-  '178.32.93.168',
-  '83.169.42.180'].forEach(function (host) {
-    draw_host(context, x, y, host, r, 3, lo, hi);
   });
 
   ////
@@ -150,36 +166,20 @@ var render = function () {
   var hi = ipv4_to_int('10.42.4.255');
 
   Object.keys(packets).forEach(function (key) {
-    var packet = clone(packets[key]);
+    var packet = packets[key];
     if (date - packet.date < 1000) {
-      var src = ipv4_to_int(packet.src);
-      var dst = ipv4_to_int(packet.dst);
-      packet.src = inside(src, lo, hi) ? packet.src : gw;
-      packet.dst = inside(dst, lo, hi) ? packet.dst : gw;
 
-      draw_packet(context, x, y, packet, r, lo, hi, date);
+      draw_packet(context, x, y, packet, r, lo, hi, date, gw);
+
       hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
       hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
     };
   });
 
   // TODO sort by size
-  context.fillStyle = '#ffffff';
   Object.keys(hosts).forEach(function (host) {
-    draw_host(context, x, y, host, r, Math.min(Math.max(hosts[host], 3), 12), lo, hi);
+    draw_host(context, x, y, host, r, Math.min(Math.max(hosts[host], 3), 12), lo, hi, gw);
   });
-
-  context.fillStyle = '#00ff00';
-  draw_host(context, x, y, gw, r, 5, lo, hi);
-
-  context.fillStyle = '#ff00ff';
-  draw_host(context, x, y, '10.42.2.248', r, 5, lo, hi);
-
-  context.fillStyle = '#aa00ff';
-  draw_host(context, x, y, '10.42.2.232', r, 3, lo, hi);
-
-  context.fillStyle = '#ff0000';
-  draw_host(context, x, y, '10.42.3.242', r, 5, lo, hi);
 
   packets = new_packets;
 };
@@ -207,8 +207,3 @@ function inside (x, lo, hi) {
   return lo <= x && x <= hi;
 };
 
-function clone (that) {
-  function F() {}
-  F.prototype = that;
-  return new F();
-};
