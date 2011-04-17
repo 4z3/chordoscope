@@ -74,12 +74,13 @@ function draw_packet(context, x, y, packet, radius, lo, hi, gw, date, rot) {
   context.lineTo(x2, y2);
   context.closePath();
 
-  var c = Math.min(1, packet.n / 32);
+  var c = host_fillStyle[packet.src] || '#ffffff';
 
-  context.strokeStyle = '#ffffff';
+  var a = Math.min(1, packet.n / 16);
+
   var gradient = context.createLinearGradient(x1, y1, x2, y2);
-  gradient.addColorStop(1, 'rgba(255,255,255,'+c+')');
-  gradient.addColorStop((date - packet.date) / 1000, 'rgba(255,255,255,0)');
+  gradient.addColorStop(1, hex2rgb(c, a));
+  gradient.addColorStop((date - packet.date) / 1000, hex2rgb(c, 0));
   context.strokeStyle = gradient;
   context.lineWidth = Math.min(packet.n, 1);
   context.stroke();
@@ -224,3 +225,17 @@ function inside (x, lo, hi) {
   return lo <= x && x <= hi;
 };
 
+function hex2rgb(hex, opacity) {
+  var rgb = hex.replace('#', '').match(/(.{2})/g);
+ 
+  var i = 3;
+  while (i--) {
+    rgb[i] = parseInt(rgb[i], 16);
+  }
+ 
+  if (typeof opacity == 'undefined') {
+    return 'rgb(' + rgb.join(', ') + ')';
+  }
+ 
+  return 'rgba(' + rgb.join(', ') + ', ' + opacity + ')';
+};
