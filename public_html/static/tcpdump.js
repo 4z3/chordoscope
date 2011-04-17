@@ -37,9 +37,9 @@ var step = function () {
 };
 
 
-function draw_packet(context, x, y, packet, radius) {
-  src = ipv4_to_coords(packet.src, radius);
-  dst = ipv4_to_coords(packet.dst, radius);
+function draw_packet(context, x, y, packet, radius, lo, hi) {
+  src = ipv4_to_coords(packet.src, radius, radius, radius, lo, hi);
+  dst = ipv4_to_coords(packet.dst, radius, radius, radius, lo, hi);
 
   var x1 = x + src[0];
   var y1 = y + src[1];
@@ -62,33 +62,25 @@ function draw_packet(context, x, y, packet, radius) {
   context.stroke();
 };
 
-function draw_host(context, x, y, host, radius, size) {
-  host = ipv4_to_coords(host, radius);
+function draw_host(context, x, y, host, radius, size, lo, hi) {
+  host = ipv4_to_coords(host, radius, radius, radius, lo, hi);
 
   x = x + host[0];
   y = y + host[1];
 
-  context.fillStyle = '#ffffff';
   context.beginPath();
   context.arc(x, y, size, 0, Math.PI * 2, true);
   context.closePath();
   context.stroke();
   context.fill();
-  return;
-
-  //context.fillStyle = '#ffffff';
-  //context.fillRect(
-  //  x + host[0] - size/2,
-  //  y + host[1] - size/2,
-  //  size, size
-  //);
 };
 
 var render = function () {
   // TODO only redraw when visible world has changed...
   context.fillStyle = '#000044';
-
   context.fillRect(0, 0, canvas.width, canvas.height);
+
+  var new_packets = {};
 
   var n = Math.min(canvas.width, canvas.height) - 2 * 8;
   var r = n / 2;
@@ -103,13 +95,7 @@ var render = function () {
   context.lineWidth = 1;
   context.stroke();
 
-  //var senders = {};
-  //var recvers = {};
-
   var hosts = {};
-
-  var new_packets = {};
-  
   var date = new Date();
 
   Object.keys(packets).forEach(function (key) {
@@ -126,16 +112,88 @@ var render = function () {
     };
   });
 
-  packets = new_packets;
-
   // TODO sort by size
+  context.fillStyle = '#ffffff';
   Object.keys(hosts).forEach(function (host) {
     draw_host(context, x, y, host, r, Math.min(Math.max(hosts[host], 3), 12));
   });
 
-  //objects.forEach(function (object) {
-  //  object.render();
-  //});
+  // external IP
+  context.fillStyle = '#00ff00';
+  draw_host(context, x, y, '10.42.0.1', r, 5, lo, hi);
+
+  // deepmix
+  context.fillStyle = '#00aeef';
+  [ '89.179.179.5',
+  '69.163.134.109',
+  '194.183.224.59',
+  '91.121.10.128',
+  '178.32.93.168',
+  '83.169.42.180'].forEach(function (host) {
+    draw_host(context, x, y, host, r, 3, lo, hi);
+  });
+
+  ////
+  //// 10.42/16
+  ////
+  var r = n / 2;
+  var x = 8 + n + 8 + 8;
+  var y = 8;
+  context.beginPath();
+  // context#arc(x, y, radius, startAngle, endAngle [, anticlockwise])
+  context.arc(x + r, y + r, r, 0, Math.PI * 2, true);
+  context.closePath();
+  context.strokeStyle = '#ffffff';
+  context.lineWidth = 1;
+  context.stroke();
+
+  var hosts = {};
+  var date = new Date();
+
+  var gw = '10.42.0.1';
+  var lo = ipv4_to_int('10.42.0.0');
+  var hi = ipv4_to_int('10.42.4.255');
+
+  function inside (x, lo, hi) {
+    return lo <= x && x <= hi;
+  };
+
+  Object.keys(packets).forEach(function (key) {
+    var packet = packets[key];
+    if (date - packet.date < 1000) {
+      var src = ipv4_to_int(packet.src);
+      var dst = ipv4_to_int(packet.dst);
+      //if (!inside(src, lo, hi)) return;
+      //if (!inside(dst, lo, hi)) return;
+      packet.src = lo <= src && src <= hi ? packet.src : gw;
+      packet.dst = lo <= dst && dst <= hi ? packet.dst : gw;
+
+      draw_packet(context, x, y, packet, r, lo, hi);
+      hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
+      hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
+    };
+  });
+
+  // TODO sort by size
+  context.fillStyle = '#ffffff';
+  Object.keys(hosts).forEach(function (host) {
+    draw_host(context, x, y, host, r, Math.min(Math.max(hosts[host], 3), 12), lo, hi);
+  });
+
+  context.fillStyle = '#00ff00';
+  draw_host(context, x, y, gw, r, 5, lo, hi);
+
+  context.fillStyle = '#ff00ff';
+  draw_host(context, x, y, '10.42.2.248', r, 5, lo, hi);
+
+  context.fillStyle = '#aa00ff';
+  draw_host(context, x, y, '10.42.2.232', r, 3, lo, hi);
+
+  context.fillStyle = '#ff0000';
+  draw_host(context, x, y, '10.42.3.242', r, 5, lo, hi);
+
+
+  packets = new_packets;
 };
 
 var packets = {};
