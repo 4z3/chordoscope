@@ -36,7 +36,7 @@ var step = function () {
 };
 
 
-function draw_packet(context, x, y, packet, radius, lo, hi) {
+function draw_packet(context, x, y, packet, radius, lo, hi, date) {
   src = ipv4_to_coords(packet.src, radius, radius, radius, lo, hi);
   dst = ipv4_to_coords(packet.dst, radius, radius, radius, lo, hi);
 
@@ -55,7 +55,7 @@ function draw_packet(context, x, y, packet, radius, lo, hi) {
   context.strokeStyle = '#ffffff';
   var gradient = context.createLinearGradient(x1, y1, x2, y2);
   gradient.addColorStop(1, 'rgba(255,255,255,'+c+')');
-  gradient.addColorStop((new Date() - packet.date) / 1000, 'rgba(255,255,255,0)');
+  gradient.addColorStop((date - packet.date) / 1000, 'rgba(255,255,255,0)');
   context.strokeStyle = gradient;
   context.lineWidth = Math.min(packet.n, 1);
   context.stroke();
@@ -77,7 +77,7 @@ function draw_host(context, x, y, host, radius, size, lo, hi) {
 var render = function () {
   // TODO only redraw when visible world has changed...
   context.fillStyle = '#000044';
-  //context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillRect(0, 0, canvas.width, canvas.height);
 
   var new_packets = {};
 
@@ -100,7 +100,7 @@ var render = function () {
   Object.keys(packets).forEach(function (key) {
     var packet = packets[key];
     if (date - packet.date < 1000) {
-      draw_packet(context, x, y, packet, r);
+      draw_packet(context, x, y, packet, r, hi, lo, date);
       hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
       hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
       new_packets[key] = packet;
@@ -157,7 +157,7 @@ var render = function () {
       packet.src = inside(src, lo, hi) ? packet.src : gw;
       packet.dst = inside(dst, lo, hi) ? packet.dst : gw;
 
-      draw_packet(context, x, y, packet, r, lo, hi);
+      draw_packet(context, x, y, packet, r, lo, hi, date);
       hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
       hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
       new_packets[key] = packet;
