@@ -19,18 +19,17 @@ function int_to_ipv4 (x) {
   return y.reverse().join('.');
 };
 
-N = Math.pow(Math.pow(2,8),4);
-
-function ipv4_to_coords (ip, r, a, b) {
+function ipv4_to_coords (ip, r, a, b, lo, hi) {
   if (!a) a = r;
   if (!b) b = r;
-  var t = 2 * Math.PI * ipv4_to_int(ip) / N;
+  if (!lo) lo = 0;
+  if (!hi) hi = Math.pow(2, 32) - 1;
+  var t = 2 * Math.PI * (ipv4_to_int(ip) - lo) / (hi - lo);
   return [
     Math.floor(a + r * Math.cos(t)), // x
     Math.floor(b + r * Math.sin(t))  // y
   ];
 };
-
 
 try {
   exports.from_int = int_to_ipv4;
