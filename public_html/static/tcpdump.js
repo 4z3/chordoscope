@@ -51,7 +51,7 @@ var step = function () {
 };
 
 
-function draw_packet(context, x, y, packet, radius, lo, hi, date, gw) {
+function draw_packet(context, x, y, packet, radius, lo, hi, gw, date, rot) {
 
   var src = packet.src;
   var dst = packet.dst;
@@ -61,8 +61,8 @@ function draw_packet(context, x, y, packet, radius, lo, hi, date, gw) {
     if (!inside(ipv4_to_int(dst), lo, hi)) dst = gw;
   };
 
-  src = ipv4_to_coords(src, radius, radius, radius, lo, hi);
-  dst = ipv4_to_coords(dst, radius, radius, radius, lo, hi);
+  src = ipv4_to_coords(src, radius, radius, radius, lo, hi, rot);
+  dst = ipv4_to_coords(dst, radius, radius, radius, lo, hi, rot);
 
   var x1 = x + src[0];
   var y1 = y + src[1];
@@ -85,19 +85,29 @@ function draw_packet(context, x, y, packet, radius, lo, hi, date, gw) {
   context.stroke();
 };
 
-function draw_host(context, x, y, host, radius, size, lo, hi, gw) {
-
-  context.fillStyle = host_fillStyle[host] || '#ffffff';
+function draw_host(context, x, y, host, radius, size, lo, hi, gw, rot) {
+  var host_coords = ipv4_to_coords(host, radius, radius, radius, lo, hi, rot);
 
   if (gw) {
-    if (!inside(ipv4_to_int(host), lo, hi)) host = gw;
+    var gw_coords = ipv4_to_coords(gw, radius, radius, radius, lo, hi, rot);
+    // TODO this also skips everything "near" the gw
+    //      this makes some sense when rendering the Internet...
+    if (JSON.stringify(host_coords) === JSON.stringify(gw_coords)
+        //&& host !== gw
+      ) {
+      return;
+    };
   };
 
-  host = ipv4_to_coords(host, radius, radius, radius, lo, hi);
+  // don't draw hosts outside [lo,hi]
+  if (!inside(ipv4_to_int(host), lo, hi)) {
+    return;
+  };
 
-  x = x + host[0];
-  y = y + host[1];
+  x += host_coords[0];
+  y += host_coords[1];
 
+  context.fillStyle = host_fillStyle[host] || '#ffffff';
   context.beginPath();
   context.arc(x, y, size, 0, Math.PI * 2, true);
   context.closePath();
@@ -122,16 +132,25 @@ var render = function () {
       8,
       8,
       n / 2,
-      date, weights, packets
-      /*, Internet gw, lo, hi */);
+      date, weights, packets,
+      /* Internet */
+      '0.0.0.0', '255.255.255.255',
+      '10.42.0.1',
+      -0.25
+  );
 
   render_net(context,
-      8 + n + 8 + 8,
+      8 + n + 8 * 1,
       8,
       n / 2,
       date, weights, packets,
-      '10.42.0.1', '10.42.0.0', '10.42.5.255');
+      '10.42.0.0', '10.42.5.255',
+      '10.42.0.1',
+      Math.PI
+  );
+
 };
+var rot = 0;
 
 function delete_old_packets (packets, date) {
   Object.keys(packets).forEach(function (key) {
@@ -157,10 +176,10 @@ function packets_to_host_weights (x) {
 };
 
 function normalize_weight(x) {
-  return Math.min(Math.max(x, 3), 12);
+  return Math.min(Math.max(x, 3), 128);
 };
 
-function render_net (context, x, y, r, date, weights, packets, gw, lo, hi) {
+function render_net (context, x, y, r, date, weights, packets, lo, hi, gw, rot) {
   context.beginPath();
   // context#arc(x, y, radius, startAngle, endAngle [, anticlockwise])
   context.arc(x + r, y + r, r, 0, Math.PI * 2, true);
@@ -173,12 +192,12 @@ function render_net (context, x, y, r, date, weights, packets, gw, lo, hi) {
   if (hi) hi = ipv4_to_int(hi);
 
   Object.keys(packets).forEach(function (key) {
-    draw_packet(context, x, y, packets[key], r, lo, hi, date, gw);
+    draw_packet(context, x, y, packets[key], r, lo, hi, gw, date, rot);
   });
 
   // TODO sort by size
   Object.keys(weights).forEach(function (host) {
-    draw_host(context, x, y, host, r, Math.min(Math.max(weights[host], 3), 12), lo, hi, gw);
+    draw_host(context, x, y, host, r, weights[host], lo, hi, gw, rot);
   });
 };
 
