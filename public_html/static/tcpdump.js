@@ -109,17 +109,58 @@ function draw_host(context, x, y, host, radius, size, lo, hi, gw) {
 var render = function () {
   var date = new Date();
 
+  delete_old_packets(packets, date);
+  var weights = packets_to_host_weights(packets);
+
   // TODO only redraw when visible world has changed...
   context.fillStyle = '#000044';
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  var new_packets = {};
-
   var n = Math.min(canvas.width, canvas.height) - 2 * 8;
-  var r = n / 2;
-  var x = 8;
-  var y = 8;
 
+  render_net(context,
+      8,
+      8,
+      n / 2,
+      date, weights, packets
+      /*, Internet gw, lo, hi */);
+
+  render_net(context,
+      8 + n + 8 + 8,
+      8,
+      n / 2,
+      date, weights, packets,
+      '10.42.0.1', '10.42.0.0', '10.42.5.255');
+};
+
+function delete_old_packets (packets, date) {
+  Object.keys(packets).forEach(function (key) {
+    if (date - packets[key].date >= 1000) {
+      delete packets[key];
+    };
+  });
+};
+
+function packets_to_host_weights (x) {
+  var y = {};
+  Object.keys(x).forEach(function (key) {
+    var packet = x[key];
+    y[packet.src] = packet.src in y ? y[packet.src] + 1 : 3;
+    y[packet.dst] = packet.dst in y ? y[packet.dst] : 3;
+  });
+  Object.keys(x).forEach(function (key) {
+    var packet = x[key];
+    y[packet.src] = normalize_weight(y[packet.src]);
+    y[packet.dst] = normalize_weight(y[packet.dst]);
+  });
+  return y;
+};
+
+function normalize_weight(x) {
+  return Math.min(Math.max(x, 3), 12);
+};
+
+function render_net (context, x, y, r, date, weights, packets, gw, lo, hi) {
   context.beginPath();
   // context#arc(x, y, radius, startAngle, endAngle [, anticlockwise])
   context.arc(x + r, y + r, r, 0, Math.PI * 2, true);
@@ -128,60 +169,17 @@ var render = function () {
   context.lineWidth = 1;
   context.stroke();
 
-  var hosts = {};
+  if (lo) lo = ipv4_to_int(lo);
+  if (hi) hi = ipv4_to_int(hi);
 
   Object.keys(packets).forEach(function (key) {
-    var packet = packets[key];
-    if (date - packet.date < 1000) {
-      draw_packet(context, x, y, packet, r, hi, lo, date);
-      hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
-      hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
-      new_packets[key] = packet;
-    };
+    draw_packet(context, x, y, packets[key], r, lo, hi, date, gw);
   });
 
   // TODO sort by size
-  Object.keys(hosts).forEach(function (host) {
-    draw_host(context, x, y, host, r, Math.min(Math.max(hosts[host], 3), 12));
+  Object.keys(weights).forEach(function (host) {
+    draw_host(context, x, y, host, r, Math.min(Math.max(weights[host], 3), 12), lo, hi, gw);
   });
-
-  ////
-  //// 10.42/16
-  ////
-  var r = n / 2;
-  var x = 8 + n + 8 + 8;
-  var y = 8;
-  context.beginPath();
-  // context#arc(x, y, radius, startAngle, endAngle [, anticlockwise])
-  context.arc(x + r, y + r, r, 0, Math.PI * 2, true);
-  context.closePath();
-  context.strokeStyle = '#ffffff';
-  context.lineWidth = 1;
-  context.stroke();
-
-  var hosts = {};
-
-  var gw = '10.42.0.1';
-  var lo = ipv4_to_int('10.42.0.0');
-  var hi = ipv4_to_int('10.42.4.255');
-
-  Object.keys(packets).forEach(function (key) {
-    var packet = packets[key];
-    if (date - packet.date < 1000) {
-
-      draw_packet(context, x, y, packet, r, lo, hi, date, gw);
-
-      hosts[packet.src] = packet.src in hosts ? hosts[packet.src] : 1;
-      hosts[packet.dst] = packet.dst in hosts ? hosts[packet.dst] + 1 : 1;
-    };
-  });
-
-  // TODO sort by size
-  Object.keys(hosts).forEach(function (host) {
-    draw_host(context, x, y, host, r, Math.min(Math.max(hosts[host], 3), 12), lo, hi, gw);
-  });
-
-  packets = new_packets;
 };
 
 var packets = {};
