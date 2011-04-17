@@ -25,10 +25,18 @@ var contentTypeMap = {
   jpg: 'image/jpeg',
   png: 'image/png',
   tiff: 'image/tiff',
-  gif: 'image/gif'
+  gif: 'image/gif',
+  js: 'application/javascript',
+  css: 'text/css'
 };
 
-http.createServer(function(request, response) {
+function serve_file(pathname) {
+};
+exports.serve_file = serve_file;
+
+exports.make_static_server = function (root_dir) {
+
+  return function (request, response) {
   function write(code, body, headers) {
     if (!headers) headers = {};
     if (!headers['Content-Type']) headers['Content-Type'] = contentTypeMap.txt;
@@ -40,7 +48,7 @@ http.createServer(function(request, response) {
   }
 
   try {
-    var pathname = url.parse(request.url).pathname.substring(1);
+    var pathname = __dirname + '/' + root_dir + '/' + url.parse(request.url).pathname.substring(1);
 
     if (pathname.indexOf('..') != -1) {
       write(404, "cannot ask for files with .. in the name\n");
@@ -48,6 +56,7 @@ http.createServer(function(request, response) {
     }
 
     path.exists(pathname, function(exists) {
+
       if (!exists) {
         write(404, "cannot find that file\n");
         return;
@@ -72,4 +81,6 @@ http.createServer(function(request, response) {
   } catch (e) {
     write(500, e.toString());
   }
-}).listen(9090);
+};
+};
+
