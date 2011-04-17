@@ -42,14 +42,15 @@ var broadcast = (function () {
   };
 })();
 
-socket.on('connection', function (client) {
-  var key = (client.request.socket.remoteAddress
-    + ':' + client.request.socket.remotePort);
-  clients[key] = client;
-  client.on('disconnect', function () {
-    delete clients[key];
-  });
-});
+socket.on('connection', (function (last_key) {
+  return function (client) {
+    var key = ++last_key;
+    clients[key] = client;
+    client.on('disconnect', function () {
+      delete clients[key];
+    });
+  };
+})(0));
 
 tcpdump = spawn('sudo', [ 'tcpdump-as-nobody' ]);
 
