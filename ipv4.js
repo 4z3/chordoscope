@@ -19,12 +19,13 @@ function int_to_ipv4 (x) {
   return y.reverse().join('.');
 };
 
-function ipv4_to_coords (ip, r, a, b, lo, hi) {
+function ipv4_to_coords (ip, r, a, b, lo, hi, rot) {
   if (!a) a = r;
   if (!b) b = r;
   if (!lo) lo = 0;
   if (!hi) hi = Math.pow(2, 32) - 1;
   var t = 2 * Math.PI * (ipv4_to_int(ip) - lo) / (hi - lo);
+  if (rot) t += rot;
   return [
     Math.floor(a + r * Math.cos(t)), // x
     Math.floor(b + r * Math.sin(t))  // y
