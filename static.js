@@ -37,50 +37,50 @@ exports.serve_file = serve_file;
 exports.make_static_server = function (root_dir) {
 
   return function (request, response) {
-  function write(code, body, headers) {
-    if (!headers) headers = {};
-    if (!headers['Content-Type']) headers['Content-Type'] = contentTypeMap.txt;
+    function write(code, body, headers) {
+      if (!headers) headers = {};
+      if (!headers['Content-Type']) headers['Content-Type'] = contentTypeMap.txt;
 
-    response.writeHead(code, headers);
-    response.end(body);
+      response.writeHead(code, headers);
+      response.end(body);
 
-    sys.print(request.method+' '+request.url+' '+code+' '+(body||'').length+'\n');
-  }
-
-  try {
-    var pathname = __dirname + '/' + root_dir + '/' + url.parse(request.url).pathname.substring(1);
-
-    if (pathname.indexOf('..') != -1) {
-      write(404, "cannot ask for files with .. in the name\n");
-      return;
+      sys.print(request.method+' '+request.url+' '+code+' '+(body||'').length+'\n');
     }
 
-    path.exists(pathname, function(exists) {
+    try {
+      var pathname = __dirname + '/' + root_dir + '/' + url.parse(request.url).pathname.substring(1);
 
-      if (!exists) {
-        write(404, "cannot find that file\n");
+      if (pathname.indexOf('..') != -1) {
+        write(404, "cannot ask for files with .. in the name\n");
         return;
       }
 
-      fs.stat(pathname, function(err, stats) {
-        if (err) {
-          write(400, "unable to read file information: "+err+"\n");
+      path.exists(pathname, function(exists) {
+
+        if (!exists) {
+          write(404, "cannot find that file\n");
           return;
         }
 
-        fs.readFile(pathname, function(err, data) {
+        fs.stat(pathname, function(err, stats) {
           if (err) {
-            write(400, "unable to read file: "+err+"\n");
+            write(400, "unable to read file information: "+err+"\n");
             return;
           }
 
-          write(200, data, {'Content-Type': contentTypeMap[path.extname(pathname).substring(1).toLowerCase()]});
+          fs.readFile(pathname, function(err, data) {
+            if (err) {
+              write(400, "unable to read file: "+err+"\n");
+              return;
+            }
+
+            write(200, data, {'Content-Type': contentTypeMap[path.extname(pathname).substring(1).toLowerCase()]});
+          });
         });
       });
-    });
-  } catch (e) {
-    write(500, e.toString());
-  }
-};
+    } catch (e) {
+      write(500, e.toString());
+    }
+  };
 };
 
