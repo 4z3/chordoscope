@@ -1,0 +1,3 @@
+#! /bin/sh
+exec unbuffer tcpdump ip -nqt -Z nobody
+exec tcpdump -nqt -Z nobody
