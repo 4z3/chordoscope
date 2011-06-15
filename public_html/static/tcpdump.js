@@ -2,17 +2,19 @@
 host_fillStyle = {};
 host_fillStyle['10.42.2.248'] = '#ff00ff';
 host_fillStyle['10.42.2.232'] = '#aa00ff';
-host_fillStyle['10.42.3.242'] = '#ff0000';
+host_fillStyle['10.42.1.255'] = '#ff0000';
 host_fillStyle['10.42.0.1'] = '#00ff00';
 
 // deepmix
-host_fillStyle['89.179.179.5'  ] = '#00aeef';
-host_fillStyle['69.163.134.109'] = '#00aeef';
-host_fillStyle['194.183.224.59'] = '#00aeef';
-host_fillStyle['91.121.10.128' ] = '#00aeef';
 host_fillStyle['178.32.93.168' ] = '#00aeef';
+host_fillStyle['194.183.224.59'] = '#00aeef';
+host_fillStyle['69.163.134.109'] = '#00aeef';
 host_fillStyle['83.169.42.180' ] = '#00aeef';
+host_fillStyle['89.179.179.5'  ] = '#00aeef';
+host_fillStyle['91.121.10.128' ] = '#00aeef';
 
+
+var target_fps = 32;
 
 var load = function () {
   canvas = document.createElement('canvas');
@@ -24,7 +26,7 @@ var load = function () {
     if (context) {
       init();
       resize();
-      setInterval(function () { step(); render() }, 1000/30);
+      setInterval(function () { step(); render() }, 1000/target_fps);
     };
   };
 };
@@ -47,7 +49,9 @@ var resize = function () {
 };
 window.onresize = resize;
 
+var tick = 0;
 var step = function () {
+  ++tick;
 };
 
 
@@ -150,7 +154,33 @@ var render = function () {
       Math.PI
   );
 
+
+  // sandbox
+  context.beginPath();
+  var d = 1;
+  var x = 8 + n - n / 4 / 2 + d;
+  var y = 8 + n - n / 4 + d;
+  var r = n / 2 / 4 - d;
+  var t = tick / target_fps * 2 * Math.PI;
+  var l = Math.PI / 8;
+  // context#arc(x, y, radius, startAngle, endAngle [, anticlockwise])
+  context.arc(x + r, y + r, r, 0, Math.PI * 2, true);
+  context.closePath();
+  context.strokeStyle = '#aaaaaa';
+  context.lineWidth = 1;
+  context.stroke();
+  context.beginPath();
+  // context#arc(x, y, radius, startAngle, endAngle [, anticlockwise])
+  context.arc(x + r, y + r, r, t + 0, t + l, false);
+  context.strokeStyle = '#ffffff';
+  context.lineWidth = 3;
+  context.stroke();
 };
+
+
+
+
+
 var rot = 0;
 
 function delete_old_packets (packets, date) {
